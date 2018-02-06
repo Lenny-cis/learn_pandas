@@ -12,6 +12,7 @@ import numpy as np
 from pandas import DataFrame,Series
 import functools
 import itertools
+import datetime
 
 df=DataFrame({'AAA':[4,5,6,7],'BBB':[10,20,30,40],'CCC':[100,50,-30,-50]});df
 df.loc[df.AAA>=5,'BBB']=-1;df
@@ -211,3 +212,44 @@ pd.merge(df,df,left_on=['Bins','Area','Test_0'],right_on=['Bins','Area','Test_1'
 df=DataFrame({'stratifying_var':np.random.uniform(0,100,20),'price':np.random.normal(100,5,20)})
 df['quartiles']=pd.qcut(df['stratifying_var'],4,labels=['0-25%','25-50%','50-75%','75-100%'])
 df.boxplot(column='price',by='quartiles')
+
+i=pd.date_range('20000101',periods=10000)
+df=DataFrame(dict(year=i.year,month=i.month,day=i.day))
+df.head()
+%timeit pd.to_datetime(df.year*10000+df.month*100+df.day,format='%Y%m%d')
+ds=df.apply(lambda x:'%04d%02d%02d'%(x['year'],x['month'],x['day']),axis=1)
+ds.head()
+%timeit pd.to_datetime(ds)
+
+s=Series(pd.date_range('2012-01-01',periods=3,freq='d'))
+s-s.max()
+s.max()-s
+s-datetime.datetime(2011,1,1,3,5)
+s+datetime.timedelta(minutes=5)
+datetime.datetime(2011,1,1,3,5)-s
+datetime.timedelta(minutes=5)+s
+deltas=Series([datetime.timedelta(days=i) for i in range(3)])
+df=DataFrame(dict(A=s,B=deltas));df
+df['New Dates']=df['A']+df['B']
+df['Delta']=df['A']-df['New Dates'];df
+df.dtypes
+y=s-s.shift();y
+y[1]=np.nan;y
+
+def set_axis_alias(cls,axis,alias):
+    if axis not in cls._AXIS_NUMBERS:
+        raise Exception('invalid axis [%s] for alias [%s]'%(axis,alias))
+    cls._AXIS_ALIASES[alias]=axis
+def clear_axis_alias(cls,axis,alias):
+    if axis not in cls._AXIS_NUMBERS:
+        raise Exception('invalid axis [%s] for alias [%s]'%(axis,alias))
+    cls._AXIS_ALIASES.pop(alias,None)
+set_axis_alias(DataFrame,'columns','myaxis2')
+df2=DataFrame(np.random.randn(3,2),columns=['c1','c2'],index=['i1','i2','i3'])
+df2.sum(axis='myaxis2')
+clear_axis_alias(DataFrame,'columns','myaxis2')
+
+def expand_grid(data_dict):
+    rows=itertools.product(*data_dict.values())
+    return DataFrame.from_records(rows,columns=data_dict.keys())
+df=expand_grid({'height':[60,70],'weight':[100,140,180],'sex':['Male','Female']});df
